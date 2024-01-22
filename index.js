@@ -1,13 +1,16 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
+const bodyParser = require("body-parser")
 const app = express();
 const { MongoClient, ServerApiVersion } = require('mongodb');
-require("dotenv").config();
+const bcrypt = require("bcrypt")
+const jwt=require('jsonwebtoken')
 const port = process.env.PORT || 5000;
 
 app.use(cors())
 app.use(express.json());
-
+app.use(bodyParser.json())
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.ldrxrdq.mongodb.net/?retryWrites=true&w=majority`;
@@ -25,15 +28,49 @@ async function run() {
     
     await client.connect();
 
-    const huntingCollection = client.db("homeHunter").collection("home");
+    const userCollection = client.db("homeHunter").collection("users");
 
     app.post("/register", async (req, res) => {
-        const user = req.body;
+        const { fullname, role, phone, email, password } = req.body;
+
+        const existingUser = await userCollection.findOne({email})
+
+        if(existingUser){
+            return res.status(400).json({message: 'Users already exists'})
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser ={
+            fullname, role, phone, email, password:hashedPassword
+        }
   
-        const result = await huntingCollection.insertOne(user);
+        await userCollection.insertOne(newUser);
+
+        const token = jwt.sign({email:newUser.email,role:newUser.role},process.env.ACCESS_TOKEN_SECRET,{expiresIn :'1h'});
+
+        res.json({token})
         
-        res.send(result)
       });
+
+      app.post('/login', async(req, res) =>{
+        const {email, password} = req.body;
+
+        const user=await userCollection.findOne({email});
+
+        if(!user){
+            return res.status(401).json({message: 'Invalid email or password'}) 
+        }
+
+        const isPasswordValid = await bcrypt.compare(password,user.password)
+
+        if(!isPasswordValid){
+            return res.status(401).json({message: 'Invalid email or password'}) 
+        }
+
+        const token = jwt.sign({email:user.email,role:user.role},process.env.ACCESS_TOKEN_SECRET,{expiresIn :'1h'});
+          res.json({token})
+      })
 
     
     await client.db("admin").command({ ping: 1 });
