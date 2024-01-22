@@ -29,6 +29,7 @@ async function run() {
     await client.connect();
 
     const userCollection = client.db("homeHunter").collection("users");
+    const huntingCollection = client.db("homeHunter").collection("home");
 
     app.post("/register", async (req, res) => {
         const { fullname, role, phone, email, password } = req.body;
@@ -71,6 +72,17 @@ async function run() {
         const token = jwt.sign({email:user.email,role:user.role},process.env.ACCESS_TOKEN_SECRET,{expiresIn :'1h'});
           res.json({token})
       })
+
+      app.post("/addHome", async (req, res) => {
+        const newHome = req.body;
+        const result = await huntingCollection.insertOne(newHome);
+        res.send(result);
+      });
+
+      app.get("/allHomes", async (req, res) => {
+        const result = await huntingCollection.find().toArray();
+        res.send(result);
+      });
 
     
     await client.db("admin").command({ ping: 1 });
