@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 const bodyParser = require("body-parser")
 const app = express();
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const bcrypt = require("bcrypt")
 const jwt=require('jsonwebtoken')
 const port = process.env.PORT || 5000;
@@ -57,7 +57,7 @@ async function run() {
       app.post('/login', async(req, res) =>{
         const {email, password} = req.body;
 
-        const user=await userCollection.findOne({email});
+        let user=await userCollection.findOne({email});
 
         if(!user){
             return res.status(401).json({message: 'Invalid email or password'}) 
@@ -70,11 +70,17 @@ async function run() {
         }
 
         const token = jwt.sign({email:user.email,role:user.role},process.env.ACCESS_TOKEN_SECRET,{expiresIn :'1h'});
-          res.json({token})
+        let a = {
+          ...user,
+          token:token
+        }
+        
+          res.send(a)
       })
 
       app.post("/addHome", async (req, res) => {
-        const newHome = req.body;
+
+        const newHome = {...req.body};
         const result = await huntingCollection.insertOne(newHome);
         res.send(result);
       });
@@ -82,6 +88,19 @@ async function run() {
       app.get("/allHomes", async (req, res) => {
         const result = await huntingCollection.find().toArray();
         res.send(result);
+      });
+      app.get("/allHomes", async (req, res) => {
+        const email=email;
+        const result = await huntingCollection.find({email}).toArray();
+        res.send(result);
+      });
+
+      app.get("/homedetails/:_id", async (req, res) => {
+        const homeId = req.params._id;
+        const query = { _id: new ObjectId(homeId) };
+        const home = await huntingCollection.findOne(query);
+  
+        res.send(home);
       });
 
     
