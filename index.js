@@ -30,7 +30,7 @@ async function run() {
 
     const userCollection = client.db("homeHunter").collection("users");
     const huntingCollection = client.db("homeHunter").collection("home");
-
+    const bookingCollection = client.db("homeHunter").collection("booking")
     app.post("/register", async (req, res) => {
         const { fullname, role, phone, email, password } = req.body;
 
@@ -86,15 +86,7 @@ async function run() {
       });
 
       app.get("/allHomes", async (req, res) => {
-        const page=parseInt(req.query.page) || 1;
-        const size=10
-
-        console.log('pagination query',req.query,page,size)
-
-        const result = await huntingCollection.find()
-        .skip((page - 1) * size)
-        .limit(size)
-        .toArray();
+        const result = await huntingCollection.find().toArray();
         res.send(result);
       });
       app.get("/allHomes", async (req, res) => {
@@ -138,6 +130,32 @@ async function run() {
         
         res.send(result);
       });
+
+
+      app.post('/booking', async(req,res) =>{
+        const {houseId,name,email,phone} = req.body
+        console.log(houseId,name,email,phone)
+      
+        const renterBookings = bookingCollection.find({email:email}).toArray()
+
+        if(renterBookings.length >= 2){
+          return res.status(400).json({message: 'You can book a maximum of two houses.'}) 
+        }
+        const selectedHouse = await huntingCollection.findOne({_id : new ObjectId(houseId)})
+        if(!selectedHouse){
+          return res.status(404).json({message: 'House not found.'}) 
+        }
+
+        const booking ={
+        houseId : new ObjectId(houseId),
+        name,
+        email,
+        phone
+        }
+        const result = await bookingCollection.insertOne(booking)
+        
+        res.json(result)
+      })
 
     
     await client.db("admin").command({ ping: 1 });
