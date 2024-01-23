@@ -103,6 +103,26 @@ async function run() {
         res.send(home);
       });
 
+      app.put("/updateHome/:_id", async (req, res) => {
+        const id = req.params._id;
+        console.log(id)
+        const home = req.body;
+        console.log(home)
+        const filter = { _id: new ObjectId(id) };
+        const options = { upsert: true };
+  
+        const updateHome = {
+          $set: home,
+        };
+  
+        const result = await huntingCollection.updateOne(filter, updateHome, options);
+  
+        if (result.modifiedCount > 0) {
+          console.log(result)
+          res.send(result);
+        }
+      });
+
     
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
