@@ -86,7 +86,15 @@ async function run() {
       });
 
       app.get("/allHomes", async (req, res) => {
-        const result = await huntingCollection.find().toArray();
+        const page=parseInt(req.query.page) || 1;
+        const size=10
+
+        console.log('pagination query',req.query,page,size)
+
+        const result = await huntingCollection.find()
+        .skip((page - 1) * size)
+        .limit(size)
+        .toArray();
         res.send(result);
       });
       app.get("/allHomes", async (req, res) => {
